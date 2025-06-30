@@ -1,286 +1,369 @@
-/* Reset and Base Styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-/* Add Roboto font in index.html if using Google Fonts:
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-*/
-
+/* General Styling */
 .travel-authority {
   padding: 20px;
-  background-color: #f5f6fa;
-  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: #ffffff;
   color: #333;
 }
 
+/* Headings */
 h1 {
   text-align: center;
-  font-size: 2.5rem;
-  color: #2ecc71;
+  color: #2c3e50;
   margin-bottom: 20px;
-  font-weight: 700;
+  font-size: 24px;
 }
 
 /* Controls Section */
 .controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
   margin-bottom: 20px;
-  padding: 15px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  justify-content: center;
 }
 
 .search-input,
+.excel-upload,
 .employee-dropdown,
 .graph-type-dropdown,
 .year-filter-dropdown,
 .month-filter-dropdown,
-.excel-upload {
-  padding: 10px;
+.sof-filter,
+.position-filter-dropdown {
+  padding: 8px;
   border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  width: 100%;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
   transition: border-color 0.3s ease;
 }
 
 .search-input:focus,
+.excel-upload:focus,
 .employee-dropdown:focus,
 .graph-type-dropdown:focus,
 .year-filter-dropdown:focus,
-.month-filter-dropdown:focus {
-  border-color: #2ecc71;
+.month-filter-dropdown:focus,
+.sof-filter:focus,
+.position-filter-dropdown:focus {
+  border-color: #007bff;
   outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.graph-search {
+  margin-left: 10px;
 }
 
 .excel-upload {
-  padding: 8px;
-  background: #fff;
   cursor: pointer;
+  background-color: #fff;
 }
 
+.excel-upload::-webkit-file-upload-button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.excel-upload::-webkit-file-upload-button:hover {
+  background-color: #0056b3;
+}
+
+.employee-dropdown,
+.graph-type-dropdown {
+  min-width: 150px;
+}
+
+.year-filter-dropdown,
+.month-filter-dropdown,
+.sof-filter,
+.position-filter-dropdown {
+  margin-left: 10px;
+}
+
+/* Buttons */
 .export-btn,
 .rollback-btn,
 .bulk-delete-btn {
-  padding: 10px 20px;
+  padding: 8px 15px;
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
 }
 
 .export-btn {
-  background-color: #2ecc71;
-  color: #fff;
+  background-color: #28a745;
+  color: white;
 }
 
 .export-btn:hover {
-  background-color: #27ae60;
-  transform: translateY(-2px);
+  background-color: #218838;
 }
 
 .rollback-btn {
-  background-color: #3498db;
-  color: #fff;
+  background-color: #dc3545;
+  color: white;
 }
 
 .rollback-btn:hover {
-  background-color: #2980b9;
-  transform: translateY(-2px);
+  background-color: #c82333;
 }
 
 .bulk-delete-btn {
-  background-color: #e74c3c;
-  color: #fff;
+  background-color: #007bff;
+  color: white;
 }
 
-.bulk-delete-btn:hover {
-  background-color: #c0392b;
-  transform: translateY(-2px);
+.bulk-delete-btn:hover:not(:disabled) {
+  background-color: #0056b3;
 }
 
 .bulk-delete-btn:disabled {
-  background-color: #bdc3c7;
+  background-color: #cccccc;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
-/* Form Section */
+/* Form Styling */
 .travel-form {
+  background: #f8f9fa;
   padding: 20px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
   margin-bottom: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .form-input {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  width: 100%;
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
   transition: border-color 0.3s ease;
 }
 
 .form-input:focus {
-  border-color: #2ecc71;
+  border-color: #007bff;
   outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
 
-.form-input.large-text {
-  width: 100%;
+.large-text {
+  min-width: 200px;
+}
+
+.form-input[readonly] {
+  background-color: #e9ecef;
+  cursor: not-allowed;
 }
 
 button[type="submit"] {
   padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
   border: none;
-  border-radius: 5px;
-  background-color: #2ecc71;
-  color: #fff;
-  font-size: 1rem;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
 }
 
-button[type="submit"]:hover {
-  background-color: #27ae60;
-  transform: translateY(-2px);
+button[type="submit"]:hover:not(:disabled) {
+  background-color: #0056b3;
 }
 
 button[type="submit"]:disabled {
-  background-color: #bdc3c7;
+  background-color: #cccccc;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
-/* Notifications */
+/* Loading, Error, and Notification States */
+.loading,
+.error,
+.no-data {
+  text-align: center;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.loading {
+  color: #007bff;
+  font-style: italic;
+}
+
+.error {
+  color: #dc3545;
+  background-color: #f8d7da;
+}
+
 .notification {
   padding: 10px;
-  border-radius: 5px;
   margin: 10px 0;
+  border-radius: 4px;
   text-align: center;
-  font-size: 1rem;
+  font-weight: 500;
 }
 
 .notification.success {
-  background-color: #2ecc71;
-  color: #fff;
+  background-color: #d4edda;
+  color: #155724;
 }
 
 .notification.error {
-  background-color: #e74c3c;
-  color: #fff;
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
-/* Loading */
-.loading {
-  text-align: center;
-  color: #7f8c8d;
-  margin: 10px 0;
-}
-
-/* Graph Section */
+/* Graph Container */
 .graph-container {
-  padding: 20px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  margin: 20px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .graph-container h2 {
-  font-size: 1.5rem;
-  color: #2ecc71;
+  text-align: center;
+  color: #2c3e50;
   margin-bottom: 15px;
 }
 
-.no-data {
-  text-align: center;
-  color: #7f8c8d;
-}
-
-/* Table Section */
+/* Table Styling */
 .travel-table {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+  background-color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .travel-table th,
 .travel-table td {
-  padding: 12px;
+  border: 1px solid #ddd;
+  padding: 10px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  font-size: 14px;
 }
 
 .travel-table th {
-  background-color: #2ecc71;
-  color: #fff;
+  background-color: #f2f2f2;
   font-weight: 600;
+  color: #2c3e50;
 }
 
 .travel-row:hover {
-  background-color: #f9f9f9;
+  background-color: #f5f5f5;
+  transition: background-color 0.3s ease;
 }
 
-.travel-actions {
-  display: flex;
-  gap: 5px;
-}
-
-button {
-  padding: 6px 12px;
+.travel-actions button {
+  padding: 5px 10px;
+  margin-right: 5px;
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-size: 12px;
+  transition: background-color 0.3s ease;
 }
 
-button:hover {
-  transform: translateY(-1px);
+.travel-actions .delete-btn {
+  background-color: #dc3545;
+  color: white;
 }
 
-.delete-btn {
-  background-color: #e74c3c;
-  color: #fff;
+.travel-actions .delete-btn:hover {
+  background-color: #c82333;
 }
 
-.delete-btn:hover {
-  background-color: #c0392b;
+.travel-actions .print-btn {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.travel-actions .print-btn:hover {
+  background-color: #138496;
+}
+
+.travel-actions button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .controls {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
   }
+
   .form-row {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
+
+  .form-input {
+    width: 100%;
+  }
+
+  .travel-table {
+    font-size: 12px;
+  }
+
   .travel-table th,
   .travel-table td {
     padding: 8px;
-    font-size: 0.9rem;
   }
+
+  .travel-actions button {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
   h1 {
-    font-size: 2rem;
+    font-size: 20px;
+  }
+
+  .controls input,
+  .controls select,
+  .controls button {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .travel-table th,
+  .travel-table td {
+    padding: 6px;
+  }
+
+  .travel-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .travel-actions button {
+    width: 100%;
   }
 }

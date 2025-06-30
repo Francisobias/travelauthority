@@ -16,11 +16,9 @@ import './TravelAuthority.css';
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend);
 
-// Initial form state including sof
+// Initial form state
 const initialFormState = {
   employeeID: '',
-  initial: '',
-  name: '',
   positiondesignation: '',
   station: '',
   purpose: '',
@@ -29,40 +27,85 @@ const initialFormState = {
   toDate: '',
   destination: '',
   area: '',
-  sof: '', // Added Source of Funds
+  sof: '',
+  attachment: null,
+  attachmentPreview: null,
 };
 
-// Function to format date as MM/DD/YYYY
+// Format date as MM/DD/YYYY
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
   const date = new Date(dateStr);
   return isNaN(date.getTime()) ? 'N/A' : `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}`;
 };
 
-// Month names for dropdown
+// Current date and time (04:47 PM PST, June 30, 2025)
+const currentDateTime = new Date('2025-06-30T16:47:00-07:00');
+
 const monthOptions = [
   { value: '', label: 'All Months' },
-  { value: '01', label: 'January' },
-  { value: '02', label: 'February' },
-  { value: '03', label: 'March' },
-  { value: '04', label: 'April' },
-  { value: '05', label: 'May' },
-  { value: '06', label: 'June' },
-  { value: '07', label: 'July' },
-  { value: '08', label: 'August' },
-  { value: '09', label: 'September' },
-  { value: '10', label: 'October' },
-  { value: '11', label: 'November' },
-  { value: '12', label: 'December' },
+  ...Array.from({ length: 12 }, (_, i) => ({
+    value: String(i + 1).padStart(2, '0'),
+    label: new Date(0, i).toLocaleString('en-US', { month: 'long' }),
+  })),
 ];
+
+const createPrintTemplate = (entry) => `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title>Travel Entry - ${entry.Name || 'Unnamed'}</title>
+    <style>
+      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; }
+      .print-container { width: 100%; max-width: 800px; margin: 0 auto; }
+      .header { text-align: center; margin-bottom: 20px; }
+      .header h2 { font-size: 18pt; margin: 0; }
+      .header p { font-size: 10pt; color: #555; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+      th { background: #f2f2f2; font-weight: bold; }
+      .footer { text-align: center; font-size: 8pt; color: #777; margin-top: 20px; }
+      @page { margin: 1in; }
+      a { color: #0066cc; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <div class="print-container">
+      <div class="header">
+        <h2>Travel Entry Details - ${entry.Name || 'Unnamed'}</h2>
+        <p>Generated on: ${currentDateTime.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', hour12: true })} PST</p>
+      </div>
+      <table>
+        <tr><th>Field</th><th>Value</th></tr>
+        <tr><td>Name</td><td>${entry.Name || 'N/A'}</td></tr>
+        <tr><td>Position</td><td>${entry.PositionDesignation || 'N/A'}</td></tr>
+        <tr><td>Initial</td><td>${entry.Initial || 'N/A'}</td></tr>
+        <tr><td>Station</td><td>${entry.Station || 'N/A'}</td></tr>
+        <tr><td>Purpose</td><td>${entry.Purpose || 'N/A'}</td></tr>
+        <tr><td>Host</td><td>${entry.Host || 'N/A'}</td></tr>
+        <tr><td>Dates</td><td>${formatDate(entry.DatesFrom)} to ${formatDate(entry.DatesTo)}</td></tr>
+        <tr><td>Destination</td><td>${entry.Destination || 'N/A'}</td></tr>
+        <tr><td>Area</td><td>${entry.Area || 'N/A'}</td></tr>
+        <tr><td>Source of Funds</td><td>${entry.sof || 'N/A'}</td></tr>
+        <tr><td>Employee ID</td><td>${entry.employee_ID || 'N/A'}</td></tr>
+        ${entry.Attachment ? `<tr><td>Attachment</td><td><a href="http://localhost:3000${entry.Attachment}" target="_blank">View PDF</a></td></tr>` : ''}
+      </table>
+      <div class="footer">
+        <p>Travel Authority Database - Printed on ${currentDateTime.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', hour12: true })} PST</p>
+      </div>
+    </div>
+  </body>
+  </html>
+`;
 
 const TravelAuthority = () => {
   const [form, setForm] = useState(initialFormState);
   const [editingId, setEditingId] = useState(null);
   const [entries, setEntries] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [search, setSearch] = useState(''); // Search for table entries (name or sof)
-  const [graphSearch, setGraphSearch] = useState(''); // Search for graph by employee
+  const [search, setSearch] = useState('');
+  const [graphSearch, setGraphSearch] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [graphType, setGraphType] = useState('year');
@@ -74,9 +117,9 @@ const TravelAuthority = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [filterYear, setFilterYear] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
-  const [filterSof, setFilterSof] = useState(''); // New filter for sof
+  const [filterSof, setFilterSof] = useState('');
+  const [selectedPositionTitle, setSelectedPositionTitle] = useState('');
 
-  // Fetch graph data with employee_ID, year, month, and sof filter
   const fetchGraphData = useCallback(async () => {
     setLoading(true);
     try {
@@ -84,34 +127,34 @@ const TravelAuthority = () => {
       if (selectedEmployeeId) url += `&employee_ID=${selectedEmployeeId}`;
       if (filterYear) url += `&year=${filterYear}`;
       if (filterMonth) url += `&month=${filterMonth}`;
+      if (selectedPositionTitle) url += `&positionTitle=${encodeURIComponent(selectedPositionTitle)}`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch graph data');
+      if (!response.ok) throw new Error(`Failed to fetch graph data: ${response.statusText}`);
       const data = await response.json();
-      const processedData = {
+      setGraphData({
         labels: data.labels || [],
-        datasets: data.datasets || [
-          {
-            label: `Travel Entries by ${graphType}${filterYear ? ` in ${filterYear}` : ''}${filterMonth ? `, ${monthOptions.find(m => m.value === filterMonth).label}` : ''}${selectedEmployeeId ? ` for Employee ID ${selectedEmployeeId}` : ''}`,
-            data: data.datasets[0]?.data || [],
-            fill: false,
-            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 2,
-            pointRadius: 5,
-            pointHoverRadius: 7,
-          },
-        ],
-      };
-      setGraphData(processedData);
+        datasets: data.datasets.length
+          ? data.datasets
+          : [{
+              label: `Travel Entries by ${graphType}${filterYear ? ` in ${filterYear}` : ''}${filterMonth ? `, ${monthOptions.find(m => m.value === filterMonth).label}` : ''}${selectedEmployeeId ? ` for Employee ID ${selectedEmployeeId}` : ''} (Position: ${selectedPositionTitle || 'All'})`,
+              data: [],
+              fill: false,
+              backgroundColor: 'rgba(75, 192, 192, 0.6)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+            }],
+      });
     } catch (err) {
+      console.error('Graph data fetch error:', err);
       setError(err.message);
       setGraphData({ labels: [], datasets: [] });
     } finally {
       setLoading(false);
     }
-  }, [graphType, selectedEmployeeId, filterYear, filterMonth]);
+  }, [graphType, selectedEmployeeId, filterYear, filterMonth, selectedPositionTitle]);
 
-  // Fetch initial data
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -119,24 +162,41 @@ const TravelAuthority = () => {
         fetch('http://localhost:3000/travels'),
         fetch('http://localhost:3000/employees'),
       ]);
-      if (!travelRes.ok || !empRes.ok) throw new Error('Network response was not ok');
+      if (!travelRes.ok) throw new Error(`Failed to fetch travels: ${travelRes.statusText}`);
+      if (!empRes.ok) throw new Error(`Failed to fetch employees: ${empRes.statusText}`);
       const [travelData, empData] = await Promise.all([travelRes.json(), empRes.json()]);
-      setEntries(travelData || []);
-      setEmployees(empData || []);
+      setEntries(travelData);
+      setEmployees(empData);
     } catch (err) {
+      console.error('Data fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Handle form input changes
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, files } = e.target;
+    if (name === 'attachment' && files && files[0]) {
+      const file = files[0];
+      if (file.type !== 'application/pdf') {
+        setError('Please upload a PDF file only.');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File size exceeds 10MB limit.');
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        attachment: file,
+        attachmentPreview: URL.createObjectURL(file),
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  // Handle employee selection for form and graph
   const handleSelectEmployee = (e) => {
     const employeeId = e.target.value;
     setSelectedEmployeeId(employeeId);
@@ -145,16 +205,16 @@ const TravelAuthority = () => {
       setForm((prev) => ({
         ...prev,
         employeeID: emp.uid || '',
-        name: emp.fullname || '',
         positiondesignation: emp.positionTitle || '',
-        initial: emp.Initial || '',
         station: emp.office || '',
-        sof: emp.sof || '', // Include sof from employee
+        sof: emp.sof || '',
+        attachment: null,
+        attachmentPreview: null,
       }));
     }
+    fetchGraphData();
   };
 
-  // Handle graph search to find employee_ID
   const handleGraphSearch = (e) => {
     const searchTerm = e.target.value.toLowerCase();
     setGraphSearch(searchTerm);
@@ -167,23 +227,51 @@ const TravelAuthority = () => {
     fetchGraphData();
   };
 
-  // Handle year, month, and sof filter changes
-  const handleYearFilter = (e) => setFilterYear(e.target.value);
-  const handleMonthFilter = (e) => setFilterMonth(e.target.value);
-  const handleSofFilter = (e) => setFilterSof(e.target.value.toLowerCase());
+  const handleYearFilter = (e) => {
+    setFilterYear(e.target.value);
+    fetchGraphData();
+  };
 
-  // Handle form submission
+  const handleMonthFilter = (e) => {
+    setFilterMonth(e.target.value);
+    fetchGraphData();
+  };
+
+  const handleSofFilter = (e) => {
+    setFilterSof(e.target.value.toLowerCase());
+  };
+
+  const handlePositionTitleFilter = (e) => {
+    setSelectedPositionTitle(e.target.value);
+    fetchGraphData();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    const requiredFields = ['employeeID', 'positiondesignation', 'station', 'purpose', 'host', 'fromDate', 'toDate', 'destination', 'area', 'sof'];
+    const requiredFields = ['positiondesignation', 'station', 'purpose', 'host', 'fromDate', 'toDate', 'destination', 'area', 'sof'];
     const missingFields = requiredFields.filter((field) => !form[field]);
     if (missingFields.length > 0) {
       setError(`Missing required fields: ${missingFields.join(', ')}`);
       setLoading(false);
       return;
     }
+
+    const formData = new FormData();
+    Object.entries({
+      employeeID: form.employeeID,
+      positiondesignation: form.positiondesignation,
+      station: form.station,
+      purpose: form.purpose,
+      host: form.host,
+      datesfrom: form.fromDate,
+      datesto: form.toDate,
+      destination: form.destination,
+      area: form.area,
+      sof: form.sof,
+    }).forEach(([key, value]) => formData.append(key, value));
+    if (form.attachment) formData.append('attachment', form.attachment);
 
     const method = editingId ? 'PUT' : 'POST';
     const url = editingId
@@ -193,95 +281,80 @@ const TravelAuthority = () => {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeID: form.employeeID,
-          positiondesignation: form.positiondesignation,
-          station: form.station,
-          purpose: form.purpose,
-          host: form.host,
-          datesfrom: form.fromDate,
-          datesto: form.toDate,
-          destination: form.destination,
-          area: form.area,
-          sof: form.sof, // Include sof in submission
-        }),
+        body: formData,
       });
-
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to save entry');
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to ${method === 'PUT' ? 'update' : 'save'} entry: ${res.statusText}`);
       }
       const data = await res.json();
-
-      if (method === 'PUT') {
-        setEntries((prev) =>
-          prev.map((e) =>
-            e.id === editingId
-              ? { ...form, id: editingId, DatesFrom: form.fromDate, DatesTo: form.toDate, sof: form.sof }
-              : e
-          )
-        );
-      } else {
-        setEntries((prev) => [
-          ...prev,
-          { ...form, id: data.id, DatesFrom: form.fromDate, DatesTo: form.toDate, sof: form.sof },
-        ]);
-      }
+      const updatedEntry = {
+        ...form,
+        id: editingId || data.id,
+        DatesFrom: form.fromDate,
+        DatesTo: form.toDate,
+        sof: form.sof,
+        Attachment: data.attachmentPath || null,
+      };
+      setEntries((prev) => (method === 'PUT' ? prev.map((e) => (e.id === editingId ? updatedEntry : e)) : [...prev, updatedEntry]));
       setForm(initialFormState);
       setEditingId(null);
       fetchGraphData();
       setNotification({ message: `Entry ${method === 'PUT' ? 'updated' : 'added'} successfully!`, type: 'success' });
     } catch (err) {
+      console.error('Submission error:', err);
       setError(err.message);
       setNotification({ message: `Error: ${err.message}`, type: 'error' });
     } finally {
       setLoading(false);
-      setTimeout(() => setNotification({ message: '', type: '' }), 3000);
+      setTimeout(() => {
+        setError(null);
+        setNotification({ message: '', type: '' });
+      }, 3000);
     }
   };
 
-  // Handle edit action
   const handleEdit = (entry) => {
-    const formattedEntry = {
-      ...entry,
+    setForm({
       employeeID: entry.employee_ID || '',
-      initial: entry.Initial || '',
-      name: entry.fullname || '',
       positiondesignation: entry.PositionDesignation || '',
-      station: entry.office || '',
+      station: entry.Station || '',
       purpose: entry.Purpose || '',
       host: entry.Host || '',
       fromDate: entry.DatesFrom ? new Date(entry.DatesFrom).toISOString().split('T')[0] : '',
       toDate: entry.DatesTo ? new Date(entry.DatesTo).toISOString().split('T')[0] : '',
       destination: entry.Destination || '',
       area: entry.Area || '',
-      sof: entry.sof || '', // Include sof in edit
-    };
-    setForm(formattedEntry);
+      sof: entry.sof || '',
+      attachment: null,
+      attachmentPreview: entry.Attachment ? `http://localhost:3000${entry.Attachment}` : null,
+    });
     setEditingId(entry.id);
   };
 
-  // Handle single delete action
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this entry?')) return;
     setLoading(true);
     try {
       const res = await fetch(`http://localhost:3000/travels/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete entry');
+      if (!res.ok) throw new Error(`Failed to delete entry: ${res.statusText}`);
+      const data = await res.json();
       setEntries((prev) => prev.filter((e) => e.id !== id));
       fetchGraphData();
-      setNotification({ message: 'Entry deleted successfully!', type: 'success' });
+      setNotification({ message: data.message || 'Entry deleted successfully!', type: 'success' });
     } catch (err) {
+      console.error('Delete error:', err);
       setError(err.message);
       setNotification({ message: `Error: ${err.message}`, type: 'error' });
     } finally {
       setLoading(false);
-      setTimeout(() => setNotification({ message: '', type: '' }), 3000);
+      setTimeout(() => {
+        setError(null);
+        setNotification({ message: '', type: '' });
+      }, 3000);
     }
   };
 
-  // Handle bulk delete action
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) {
       setError('No entries selected for deletion');
@@ -296,46 +369,29 @@ const TravelAuthority = () => {
         body: JSON.stringify({ ids: Array.from(selectedIds) }),
       });
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to delete entries');
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to delete entries: ${res.statusText}`);
       }
       const data = await res.json();
       setEntries((prev) => prev.filter((e) => !selectedIds.has(e.id)));
       setSelectedIds(new Set());
       fetchGraphData();
-      setNotification({ message: data.message, type: 'success' });
+      setNotification({ message: data.message || 'Entries deleted successfully!', type: 'success' });
     } catch (err) {
+      console.error('Bulk delete error:', err);
       setError(err.message);
       setNotification({ message: `Error: ${err.message}`, type: 'error' });
     } finally {
       setLoading(false);
-      setTimeout(() => setNotification({ message: '', type: '' }), 3000);
+      setTimeout(() => {
+        setError(null);
+        setNotification({ message: '', type: '' });
+      }, 3000);
     }
   };
 
-  // Normalize key for Excel parsing
   const normalizeKey = (key) => key?.toLowerCase().trim();
 
-  // Parse DMY to YMD for Excel dates
-  const parseDMYtoYMD = (input) => {
-    if (!input) return '';
-    if (!isNaN(input)) {
-      const excelSerial = Number(input);
-      const excelEpoch = new Date('1899-12-30');
-      const date = new Date(excelEpoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    }
-    const cleaned = input.toString().replace(/["'\r\n]/g, '').trim();
-    const parts = cleaned.split(/[/\-.]/);
-    if (parts.length === 3) {
-      let [d, m, y] = parts;
-      if (y.length === 2) y = '20' + y;
-      return `${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-    }
-    return '';
-  };
-
-  // Handle Excel file upload with confirmation, rollback, and notification
   const handleExcel = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -362,98 +418,131 @@ const TravelAuthority = () => {
             return acc;
           }, {});
 
-          return {
-            employeeID: keys['employee_id'] || '',
+          const entry = {
+            employeeID: keys['employee_id'] || keys['employeeid'] || '',
             positiondesignation: keys['positiondesignation'] || '',
             station: keys['station'] || '',
             purpose: keys['purpose'] || '',
             host: keys['host'] || '',
-            fromDate: parseDMYtoYMD(keys['datesfrom']) || '',
-            toDate: parseDMYtoYMD(keys['datesto']) || '',
+            fromDate: keys['datesfrom'] || keys['datefrom'] || '',
+            toDate: keys['datesto'] || keys['dateto'] || '',
             destination: keys['destination'] || '',
             area: keys['area'] || '',
-            sof: keys['sof'] || '', // Include sof from Excel
+            sof: keys['sof'] || keys['sourceoffunds'] || '',
           };
-        });
 
+          const requiredFields = ['employeeID', 'positiondesignation', 'station', 'purpose', 'host', 'fromDate', 'toDate', 'destination', 'area', 'sof'];
+          const missingFields = requiredFields.filter((field) => !entry[field] || entry[field] === '');
+          if (missingFields.length > 0) {
+            console.warn(`Skipping invalid entry due to missing fields: ${missingFields.join(', ')}`, entry);
+            return null;
+          }
+
+          return entry;
+        }).filter((entry) => entry !== null);
+
+        if (payload.length === 0) throw new Error('No valid data found in Excel file');
+        console.log('Sending payload:', JSON.stringify(payload, null, 2));
         const res = await fetch('http://localhost:3000/travels/bulk', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-
-        const text = await res.text();
-        try {
-          const result = JSON.parse(text);
-          if (res.status === 201) {
-            setNotification({ message: result.message || 'Excel file uploaded successfully! Rollback available.', type: 'success' });
-            await fetchData();
-            await fetchGraphData();
-            setShowRollback(true);
-          } else {
-            throw new Error(result.error || 'Upload failed due to invalid data');
-          }
-        } catch (err) {
-          setNotification({ message: `Upload failed: ${err.message}. All uploaded data has been removed.`, type: 'error' });
-          setError(err.message);
-          setEntries(preUploadEntries);
-          await fetchGraphData();
+        if (!res.ok) {
+          const text = await res.text();
+          const errorData = await res.json().catch(() => ({ error: text }));
+          console.error('Server response:', errorData);
+          throw new Error(`Failed to upload Excel: ${res.statusText} - Details: ${JSON.stringify(errorData)}`);
         }
+        const result = await res.json();
+        setNotification({ message: result.message || 'Excel file uploaded successfully! Rollback available.', type: 'success' });
+        await fetchData();
+        await fetchGraphData();
+        setShowRollback(true);
       } catch (err) {
-        setNotification({ message: `Failed to parse Excel file: ${err.message}. No data was uploaded.`, type: 'error' });
+        console.error('Excel upload error:', err);
+        setNotification({ message: `Upload failed: ${err.message}. All uploaded data has been removed.`, type: 'error' });
         setError(err.message);
         setEntries(preUploadEntries);
         await fetchGraphData();
       } finally {
         setLoading(false);
-        setTimeout(() => setNotification({ message: '', type: '' }), 3000);
+        setTimeout(() => {
+          setError(null);
+          setNotification({ message: '', type: '' });
+        }, 3000);
         e.target.value = '';
       }
     };
     reader.readAsBinaryString(file);
   };
 
-  // Handle rollback action
   const handleRollback = () => {
     if (window.confirm('Are you sure you want to rollback to the previous data?')) {
       setEntries(preUploadEntries);
       setNotification({ message: 'Data rolled back successfully! All uploaded data has been removed.', type: 'success' });
       fetchGraphData();
       setShowRollback(false);
-      setTimeout(() => setNotification({ message: '', type: '' }), 3000);
+      setTimeout(() => {
+        setError(null);
+        setNotification({ message: '', type: '' });
+      }, 3000);
     }
   };
 
-  // Handle Excel export
   const handleExportExcel = () => {
     const worksheetData = filteredEntries.map((entry) => ({
-      Name: entry.fullname || 'Unnamed',
+      Name: entry.Name || 'Unnamed',
       Position: entry.PositionDesignation || 'N/A',
       Initial: entry.Initial || 'N/A',
-      Station: entry.office || 'N/A',
+      Station: entry.Station || 'N/A',
       Purpose: entry.Purpose || 'N/A',
       Host: entry.Host || 'N/A',
       Dates: `${formatDate(entry.DatesFrom)} to ${formatDate(entry.DatesTo)}`,
       Destination: entry.Destination || 'N/A',
       Area: entry.Area || 'N/A',
-      'Source of Funds': entry.sof || 'N/A', // Include sof in export
+      'Source of Funds': entry.sof || 'N/A',
       EmployeeID: entry.employee_ID || 'N/A',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Travel Entries');
-    XLSX.writeFile(workbook, `Travel_Entries_${new Date().toLocaleDateString()}.xlsx`);
+    const filename = `Travel_Entries_${currentDateTime.toLocaleDateString()}_${currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).replace(/:/g, '-')}.xlsx`;
+    XLSX.writeFile(workbook, filename);
   };
 
-  // Graph options
+  const handlePrint = (entry) => {
+    const printContent = createPrintTemplate(entry);
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    } else {
+      setError('Popup blocked. Please allow popups for printing.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const handleViewAttachment = (attachmentPath) => {
+    if (attachmentPath) {
+      window.open(`http://localhost:3000${attachmentPath}`, '_blank', 'noopener,noreferrer');
+    } else {
+      setError('No attachment available to view.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
   const graphOptions = {
     responsive: true,
     plugins: {
       legend: { position: 'top' },
       title: {
         display: true,
-        text: `Travel Entries by ${graphType}${filterYear ? ` in ${filterYear}` : ''}${filterMonth ? `, ${monthOptions.find(m => m.value === filterMonth).label}` : ''}${selectedEmployeeId ? ` for Employee ID ${selectedEmployeeId}` : ''}`,
+        text: `Travel Entries by ${graphType}${filterYear ? ` in ${filterYear}` : ''}${filterMonth ? `, ${monthOptions.find(m => m.value === filterMonth).label}` : ''}${selectedEmployeeId ? ` for Employee ID ${selectedEmployeeId}` : ''} (Position: ${selectedPositionTitle || 'All'})`,
       },
     },
     scales: {
@@ -462,12 +551,11 @@ const TravelAuthority = () => {
     },
   };
 
-  // Filtering logic for table with name, sof, year, and month filter
   const filteredEntries = entries.filter((entry) => {
     const matchesSearch =
       !search ||
-      (entry.fullname && entry.fullname.toLowerCase().includes(search.toLowerCase())) ||
-      (entry.sof && entry.sof.toLowerCase().includes(search.toLowerCase())); // Include sof in search
+      (entry.Name && entry.Name.toLowerCase().includes(search.toLowerCase())) ||
+      (entry.sof && entry.sof.toLowerCase().includes(search.toLowerCase()));
     const matchesYear =
       !filterYear ||
       (entry.DatesFrom && new Date(entry.DatesFrom).getFullYear().toString() === filterYear);
@@ -477,10 +565,12 @@ const TravelAuthority = () => {
     const matchesSof =
       !filterSof ||
       (entry.sof && entry.sof.toLowerCase().includes(filterSof));
-    return matchesSearch && matchesYear && matchesMonth && matchesSof;
+    const matchesPosition =
+      !selectedPositionTitle ||
+      (entry.PositionDesignation && entry.PositionDesignation.toLowerCase().includes(selectedPositionTitle.toLowerCase()));
+    return matchesSearch && matchesYear && matchesMonth && matchesSof && matchesPosition;
   });
 
-  // Toggle selection for bulk delete
   const handleToggleSelect = (id) => {
     setSelectedIds((prev) => {
       const newSet = new Set(prev);
@@ -490,13 +580,11 @@ const TravelAuthority = () => {
     });
   };
 
-  // Select all visible entries
   const handleSelectAll = () => {
     const allIds = new Set(filteredEntries.map((entry) => entry.id));
     setSelectedIds(allIds);
   };
 
-  // Effect to fetch data on mount and when dependencies change
   useEffect(() => {
     fetchData();
     fetchGraphData();
@@ -547,6 +635,7 @@ const TravelAuthority = () => {
           <option value="year">Year</option>
           <option value="month">Month</option>
           <option value="week">Week</option>
+          <option value="date">Date</option>
         </select>
         <select
           value={filterYear}
@@ -581,6 +670,19 @@ const TravelAuthority = () => {
           className="search-input sof-filter"
           style={{ marginLeft: '10px' }}
         />
+        <select
+          value={selectedPositionTitle}
+          onChange={handlePositionTitleFilter}
+          className="position-filter-dropdown"
+          style={{ marginLeft: '10px' }}
+        >
+          <option value="">All Positions</option>
+          {[...new Set(employees.map((emp) => emp.positionTitle).filter(Boolean))].sort().map((title) => (
+            <option key={title} value={title}>
+              {title}
+            </option>
+          ))}
+        </select>
         <button onClick={handleExportExcel} className="export-btn" style={{ marginLeft: '10px' }}>
           Export to Excel
         </button>
@@ -594,18 +696,22 @@ const TravelAuthority = () => {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="travel-form">
+      <form onSubmit={handleSubmit} className="travel-form" encType="multipart/form-data">
         <div className="form-row">
-          <input
-            type="text"
-            name="name"
-            value={form.name}
+          <select
+            name="employeeID"
+            value={form.employeeID}
             onChange={handleChange}
-            placeholder="Name"
             className="form-input large-text"
             required
-            readOnly
-          />
+          >
+            <option value="">Select Employee</option>
+            {employees.map((emp) => (
+              <option key={emp.uid} value={emp.uid}>
+                {emp.fullname} - {emp.Initial}
+              </option>
+            ))}
+          </select>
           <input
             type="text"
             name="positiondesignation"
@@ -614,20 +720,9 @@ const TravelAuthority = () => {
             placeholder="Position/Designation"
             className="form-input large-text"
             required
-            readOnly
           />
         </div>
         <div className="form-row">
-          <input
-            type="text"
-            name="initial"
-            value={form.initial}
-            onChange={handleChange}
-            placeholder="Initial"
-            className="form-input"
-            required
-            readOnly
-          />
           <input
             type="text"
             name="station"
@@ -636,10 +731,7 @@ const TravelAuthority = () => {
             placeholder="Station"
             className="form-input"
             required
-            readOnly
           />
-        </div>
-        <div className="form-row">
           <input
             type="text"
             name="purpose"
@@ -649,6 +741,8 @@ const TravelAuthority = () => {
             className="form-input"
             required
           />
+        </div>
+        <div className="form-row">
           <input
             type="text"
             name="host"
@@ -658,8 +752,6 @@ const TravelAuthority = () => {
             className="form-input"
             required
           />
-        </div>
-        <div className="form-row">
           <input
             type="date"
             name="fromDate"
@@ -668,6 +760,8 @@ const TravelAuthority = () => {
             className="form-input"
             required
           />
+        </div>
+        <div className="form-row">
           <input
             type="date"
             name="toDate"
@@ -676,8 +770,6 @@ const TravelAuthority = () => {
             className="form-input"
             required
           />
-        </div>
-        <div className="form-row">
           <input
             type="text"
             name="destination"
@@ -687,6 +779,8 @@ const TravelAuthority = () => {
             className="form-input"
             required
           />
+        </div>
+        <div className="form-row">
           <input
             type="text"
             name="area"
@@ -696,8 +790,6 @@ const TravelAuthority = () => {
             className="form-input"
             required
           />
-        </div>
-        <div className="form-row">
           <input
             type="text"
             name="sof"
@@ -708,12 +800,26 @@ const TravelAuthority = () => {
             required
           />
         </div>
+        <div className="form-row">
+          <input
+            type="file"
+            name="attachment"
+            onChange={handleChange}
+            accept="application/pdf"
+            className="form-input attachment-upload"
+          />
+          {form.attachmentPreview && (
+            <a href={form.attachmentPreview} target="_blank" rel="noopener noreferrer" className="attachment-preview">
+              Preview PDF
+            </a>
+          )}
+        </div>
         <button type="submit" disabled={loading}>
           {loading ? 'Processing...' : (editingId ? 'Update' : 'Add') + ' Entry'}
         </button>
       </form>
 
-      {loading && <p className="loading">Loading...</p>}
+      {loading && <p className="loading">Loading... Please wait.</p>}
       {error && <p className="error">Error: {error}</p>}
       {notification.message && (
         <div className={`notification ${notification.type}`}>
@@ -726,7 +832,7 @@ const TravelAuthority = () => {
         {graphData.labels.length > 0 && graphData.datasets.length > 0 ? (
           <Line data={graphData} options={graphOptions} />
         ) : (
-          <p className="no-data">No graph data available. Please check the data or filters.</p>
+          <p className="no-data">No graph data available. Please check filters or data.</p>
         )}
       </div>
 
@@ -742,15 +848,15 @@ const TravelAuthority = () => {
             </th>
             <th>Name</th>
             <th>Position</th>
-            <th>Initial</th>
             <th>Station</th>
             <th>Purpose</th>
             <th>Host</th>
             <th>Dates</th>
             <th>Destination</th>
             <th>Area</th>
-            <th>Source of Funds</th> {/* New column */}
+            <th>Source of Funds</th>
             <th>Employee ID</th>
+            <th>Attachment</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -766,8 +872,7 @@ const TravelAuthority = () => {
               </td>
               <td>{entry.fullname || 'Unnamed'}</td>
               <td>{entry.PositionDesignation || 'N/A'}</td>
-              <td>{entry.Initial || 'N/A'}</td>
-              <td>{entry.office || 'N/A'}</td>
+              <td>{entry.Station || 'N/A'}</td>
               <td>{entry.Purpose || 'N/A'}</td>
               <td>{entry.Host || 'N/A'}</td>
               <td>
@@ -775,8 +880,9 @@ const TravelAuthority = () => {
               </td>
               <td>{entry.Destination || 'N/A'}</td>
               <td>{entry.Area || 'N/A'}</td>
-              <td>{entry.sof || 'N/A'}</td> {/* New column */}
+              <td>{entry.sof || 'N/A'}</td>
               <td>{entry.employee_ID || 'N/A'}</td>
+              <td>{entry.Attachment ? <a href={`http://localhost:3000${entry.Attachment}`} target="_blank" rel="noopener noreferrer">View PDF</a> : 'N/A'}</td>
               <td className="travel-actions">
                 <button onClick={() => handleEdit(entry)} disabled={loading}>
                   Edit
@@ -788,6 +894,22 @@ const TravelAuthority = () => {
                 >
                   Delete
                 </button>
+                <button
+                  className="print-btn"
+                  onClick={() => handlePrint(entry)}
+                  disabled={loading}
+                >
+                  Print
+                </button>
+                {entry.Attachment && (
+                  <button
+                    className="view-attachment-btn"
+                    onClick={() => handleViewAttachment(entry.Attachment)}
+                    disabled={loading}
+                  >
+                    View Attachment
+                  </button>
+                )}
               </td>
             </tr>
           ))}
